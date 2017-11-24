@@ -77,6 +77,7 @@ public abstract class PIPCalcProcessor extends Observable{
      */
     public void evaluateTree(){
         this.setChanged();
+        System.out.println(Integer.toString(this.tree.evaluate()));
         this.notifyObservers(Integer.toString(this.tree.evaluate()));
     }
 

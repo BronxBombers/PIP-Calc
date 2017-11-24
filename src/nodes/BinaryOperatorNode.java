@@ -29,15 +29,15 @@ public abstract class BinaryOperatorNode implements PIPCalcNode {
     }
 
     public String toPrefixString(){
-        return operator + leftChild.toPrefixString() + rightChild.toPrefixString();
+        return operator + " " + leftChild.toPrefixString() + " " +  rightChild.toPrefixString();
     }
 
     public String toInfixString(){
-        return leftChild.toInfixString() + operator + rightChild.toInfixString();
+        return "(" + leftChild.toInfixString() + " " + operator + " " + rightChild.toInfixString() + ")";
     }
 
     public String toPostfixString(){
-        return leftChild.toPostfixString() + rightChild.toPostfixString() + operator;
+        return leftChild.toPostfixString() + " " + rightChild.toPostfixString() + " " + operator;
     }
 
     public int getPrecedence(){

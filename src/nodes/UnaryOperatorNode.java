@@ -21,15 +21,15 @@ public abstract class UnaryOperatorNode implements PIPCalcNode {
     }
 
     public String toPrefixString(){
-        return operator + child.toPrefixString();
+        return  operator + " " + child.toPrefixString();
     }
 
     public String toInfixString(){
-        return operator + child.toInfixString();
+        return "(" + operator + " " + child.toInfixString() + ")";
     }
 
     public String toPostfixString(){
-        return child.toPostfixString() + operator;
+        return child.toPostfixString() + " " + operator;
     }
 
     public int getPrecedence(){
