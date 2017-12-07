@@ -2,9 +2,12 @@ package views;
 
 import controllers.PIPCalcController;
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
@@ -14,7 +17,11 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import processors.PIPCalcInfixProcessor;
+import processors.PIPCalcPostfixProcessor;
+import processors.PIPCalcPrefixProcessor;
 import processors.PIPCalcProcessor;
+
+import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -25,6 +32,10 @@ public class PIPCalcGUIView extends Application implements Observer {
     private BorderPane mainPane;
 
     private String invalid = "Invalid Entry";
+
+    private ToggleGroup group;
+
+    private String preConverted;
 
     @Override
     public void init() throws Exception {
@@ -46,7 +57,7 @@ public class PIPCalcGUIView extends Application implements Observer {
         String[] buttonText = new String[]{
                 "@","^","1","2","3","+","|","_","4","5","6","-",
                 "<","<=","7","8","9","*","!=","==","Enter","0",
-                "Clear","//",">",">=","Backspace"
+                "Clear","//",">",">=","Space","Backspace"
         };
             int i,j,colSpan,rowSpan;
             i = 0;
@@ -61,6 +72,7 @@ public class PIPCalcGUIView extends Application implements Observer {
                             Text phrase = (Text)this.mainPane.getTop();
                             String phraseT = phrase.getText();
                             String phraseTtrim = phraseT.trim();
+                            phraseTtrim = phraseTtrim.replaceAll("[()]","");
                             try {
                                 this.controller.process(phraseTtrim);
                             }catch(Exception exception){
@@ -76,7 +88,7 @@ public class PIPCalcGUIView extends Application implements Observer {
                         });
                         break;
                     case "Backspace":
-                        colSpan = 4;
+                        colSpan = 2;
                         btn.addEventHandler(MouseEvent.MOUSE_CLICKED,e-> {
                             Text box = (Text) this.mainPane.getTop();
                             if (box.getText().equals(this.invalid)){
@@ -84,21 +96,26 @@ public class PIPCalcGUIView extends Application implements Observer {
                             }
                             else {
                                 try {
-                                    if (box.getText().charAt(box.getText().length() - 1) == ' ') {
-                                        String c = Character.toString(box.getText().charAt(box.getText().length() - 2));
-                                        if (c.matches("")) {
-                                            box.setText(box.getText().substring(0, box.getText().length() - 4));
-                                        } else {
-                                            box.setText(box.getText().substring(0, box.getText().length() - 3));
-                                        }
-                                    } else {
-                                        box.setText(box.getText().substring(0, box.getText().length() - 1));
-                                    }
+                                    box.setText(box.getText().substring(0, box.getText().length() - 1));
                                 } catch (IndexOutOfBoundsException indx) {
+                                    box.setText(String.valueOf(box.getText().charAt(0)));
                                 }
                                 if (box.getText().equals("")) {
                                     box.setText("0");
                                 }
+                            }
+                        });
+                        break;
+                    case "Space":
+                        colSpan = 2;
+                        btn.addEventHandler(MouseEvent.MOUSE_CLICKED,e->{
+                            Text box = (Text) this.mainPane.getTop();
+                            if (box.getText().equals(this.invalid)){
+                                box.setText("0");
+                            }
+                            else{
+                                String pretxt1 = box.getText();
+                                box.setText(pretxt1 + " ");
                             }
                         });
                         break;
@@ -121,37 +138,33 @@ public class PIPCalcGUIView extends Application implements Observer {
                                 }
                             }catch(Exception ex) {
                                 if (PreText.equals("0")){
-                                    box.setText(buttonTxt + " ");
+                                    box.setText(buttonTxt);
                                 }
                                 else {
-                                    if (PreText.charAt(PreText.length()-1) == ' '){
-                                        box.setText(PreText + buttonTxt + " ");
-                                    }
-                                    else {
-                                        box.setText(PreText + " " + buttonTxt + " ");
-                                    }
+                                    box.setText(PreText + buttonTxt);
                                 }
                             }
                         });
                 }
-                if (colSpan != 1){
-                    btn.setPrefHeight(100);
-                    btn.setPrefWidth(400);
-                    numPad.add(btn,j,i,colSpan,rowSpan);
-                }
-                else {
-                    btn.setPrefHeight(100);
-                    btn.setPrefWidth(100);
-                    numPad.add(btn, j, i);
+
+                btn.setPrefHeight(100);
+                btn.setPrefWidth(100);
+                numPad.add(btn,j,i,colSpan,rowSpan);
+                if (colSpan == 2) {
+                    btn.setPrefWidth(200);
                 }
                 j++;
-                if (j == 6 || colSpan != 1){
+                if (colSpan == 2){
+                    j++;
+                }
+                if (j == 6){
                     i++;
                     j = 0;
                 }
         }
         String[] notationSelection = new String[]{"Infix","Postfix", "Prefix"};
         ToggleGroup group = new ToggleGroup();
+        this.group = group;
         i = 5;
         for (String text : notationSelection){
             RadioButton rb = new RadioButton(text);
@@ -163,13 +176,32 @@ public class PIPCalcGUIView extends Application implements Observer {
             numPad.add(rb,0,i,3,1);
             i++;
         }
-
+        group.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+            @Override
+            public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle newValue) {
+                RadioButton r = (RadioButton)newValue;
+                controller.changeModel(getTypeFromString(r.getText()));
+            }
+        });
         String[] notationButtons = new String[]{"To Infix","To Postfix","To Prefix"};
         i = 5;
         for (String text : notationButtons){
             Button b = new Button(text);
             b.setPrefWidth(300);
             b.setPrefHeight(100);
+            b.addEventHandler(MouseEvent.MOUSE_CLICKED,e->{
+                Text box = (Text) mainPane.getTop();
+                try {
+                    this.controller.convert(box.getText(), b.getText().substring(3, b.getText().length()).toLowerCase().trim());
+                    this.preConverted = box.getText();
+                }catch(Exception dfaf){
+                    try {
+                        this.controller.convert(this.preConverted, b.getText().substring(3, b.getText().length()).toLowerCase().trim());
+                    }catch(NullPointerException afdf){
+                        box.setText(this.invalid);
+                    }
+                }
+            });
             numPad.add(b,3,i,3,1);
             i++;
         }
@@ -183,13 +215,29 @@ public class PIPCalcGUIView extends Application implements Observer {
 
     @Override
     public void update(Observable o, Object arg) {
+        Text box = (Text)mainPane.getTop();
         try{
             int result = Integer.parseInt(arg.toString());
-            Text box = (Text)mainPane.getTop();
             box.setText(Integer.toString(result));
         }catch(Exception e){
-            return;
+            box.setText(arg.toString());
         }
+    }
+
+    private PIPCalcProcessor getTypeFromString(String type){
+        PIPCalcProcessor processor;
+        if(type.equals("infix")){
+            processor = new PIPCalcInfixProcessor();
+        }
+        else if(type.equals("prefix")){
+            processor = new PIPCalcPrefixProcessor();
+        }
+        else{
+            processor = new PIPCalcPostfixProcessor();
+        }
+
+        processor.addObserver(this);
+        return processor;
     }
 
     public static void main(String[] args){
